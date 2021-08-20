@@ -9,7 +9,7 @@ __config()->{
     },
     'arguments' -> {
         'category' -> {'type' -> 'term', 'options' -> ['mined' ,'crafted', 'used', 'broken', 'picked_up', 'dropped', 'killed', 'killed_by']},
-        'objective' -> {'type' -> 'term', 'options' -> scoreboard()},
+        'objective' -> {'type' -> 'term'},
         'updatetime' -> {'type' -> 'int', 'min' -> 1, 'max' -> 20000, 'suggest' -> [1, 10, 20]},
         'tag' -> {'type' -> 'text', 'suggest' -> ['axes', 'shovels', 'pickaxes', 'tools', 'zombie', 'creeper', 'enderman', 'planks', 'stone,cobblestone']}
     }
