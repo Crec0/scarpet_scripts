@@ -1,3 +1,13 @@
+__assert_player_can_cam_out(player) ->
+(
+   if(!query(player,'nbt','OnGround'), exit('You must be on firm ground.'));
+   if(query(player,'nbt','Air') < 300, exit('You must be in air, not suffocating nor in liquids.'));
+   if(player ~ 'is_burning', exit('You must not be on fire.'));
+   null
+);
+
+// none of your business below
+
 __config() -> (
    m(
       l('stay_loaded','true')
@@ -9,17 +19,37 @@ __command() ->
    p = player();
    current_gamemode = p~'gamemode';
    if ( current_gamemode == 'spectator',
-      __remove_camera_effects(p);
       if (config = __get_player_stored_takeoff_params(p~'name'),
+         __remove_camera_effects(p);
          __restore_player_params(p, config);
          __remove_player_config(p~'name');
+      ,
+         if (__survival_defaults(p), 
+            __remove_camera_effects(p)
+         );
       );
-   , current_gamemode == 'survival', // else if survival - switch to spectator
+   , current_gamemode == 'survival' && !global_is_in_switching, // else if survival - switch to spectator
+      __assert_player_can_cam_out(p);
+      if (global_survival_timeout > 0,
+         global_is_in_switching = true;
+         player_name = p~'name';
+         player_dim = p~'dimension';
+         schedule((global_survival_timeout+1)*20, _(outer(player_name), outer(player_dim) )-> (
+            global_is_in_switching = false;
+            p = player(player_name);
+            if (p && p~'dimension' == player_dim,
+               __store_player_takeoff_params(p);
+               __turn_to_camera_mode(p);
+            )
+         ));
+      ,
          __store_player_takeoff_params(p);
          __turn_to_camera_mode(p);
+      )
    );
-   ''
+   'Switching...'
 );
+
 
 __get_player_stored_takeoff_params(player_name) ->
 (
@@ -28,11 +58,16 @@ __get_player_stored_takeoff_params(player_name) ->
    player_tag = tag:player_name;
    if (!player_tag, return(null));
    config = m();
+   config:'pos' = player_tag:'Position.[]';
+   config:'motion' = player_tag:'Motion.[]';
+   config:'yaw' = player_tag:'Yaw';
+   config:'pitch' = player_tag:'Pitch';
+   config:'dimension' = player_tag:'Dimension';
    config:'effects' = l();
    effects_tags = player_tag:'Effects.[]';
    if (effects_tags,
-      // fixing vanilla list parser
-      if (type(effects_tags)!='list',effects_tags = l(effects_tags));      
+      if (type(effects_tags)!='list',effects_tags = l(effects_tags));
+      
       for(effects_tags, etag = _;
          effect = m();
          effect:'name' = etag:'Name';
@@ -47,6 +82,11 @@ __get_player_stored_takeoff_params(player_name) ->
 __store_player_takeoff_params(player) ->
 (
    tag = nbt('{}');
+   for(pos(player), put(tag:'Position',str('%.6fd',_),_i)); 
+   for(player~'motion', put(tag:'Motion',str('%.6fd',_),_i)); 
+   tag:'Yaw' = str('%.6f', player~'yaw');
+   tag:'Pitch' = str('%.6f', player~'pitch');
+   tag:'Dimension' = player~'dimension';
    for (player~'effect',
       l(name, amplifier, duration) = _;
       etag = nbt('{}');
@@ -64,7 +104,9 @@ __store_player_takeoff_params(player) ->
 
 __restore_player_params(player, config) ->
 (
+   run('execute in minecraft:'+config:'dimension'+' run tp @s ~ ~ ~');
    modify(player, 'gamemode', 'survival');
+   for(l('pos', 'motion', 'yaw', 'pitch'), modify(player, _, config:_));
    for (config:'effects',
       modify(player, 'effect', _:'name', _:'duration', _:'amplifier')
    );
@@ -93,6 +135,19 @@ __turn_to_camera_mode(player) ->
    modify(player, 'gamemode', 'spectator');
 );
 
-__on_player_disconnects(player, reason)->(
-   
+__survival_defaults(player) ->
+(
+   yposes = l();
+   l(x,y,z) = pos(player);
+   for(range(32), yposes+=y+_; yposes+=y-_);
+   for( yposes,
+      scan(x, _, z, 32, 0, 32,
+         if( air(_) && air(pos_offset(_, 'up')) && suffocates(pos_offset(_, 'down')),
+            modify(player, 'pos', pos(_)+l(0.5,0.2,0.5));
+            return(true);
+         )
+      )
+   );
+   print(format('rb Cannot find a safe spot to land within 32 blocks.'));
+   false;
 );
