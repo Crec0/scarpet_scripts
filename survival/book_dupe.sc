@@ -1,20 +1,36 @@
-get_page_data() -> (
+__config() -> {
+    'commands' -> {
+        '' -> _() -> _generate_book_if_possible(20),
+        '<numOfPages>' -> '_generate_book_if_possible'
+    },
+    'arguments' -> {
+        'numOfPages' -> {
+            'type' -> 'int',
+            'min' -> 1,
+            'max' -> 100,
+            'suggest' -> [1, 10, 20, 40]
+        }
+    }
+};
+
+_get_page_data(num) -> (
     pages = [];
-    for(range(20),
+    pages:0 = 'ࠀ' * 21845;
+    for(range(1, num),
         pages:_ = '{"text":"' + 'a' * 256 + '"}';
     );
     pages;
 );
 
-get_book_data() -> (
+_get_book_data(num) -> (
     book_data = {
-        'pages' -> get_page_data(),
+        'pages' -> _get_page_data(num),
         'title' -> 'dupe brrrr',
         'author' -> 'Joe mama'
     };
 );
 
-__command() -> (
+_generate_book_if_possible(num) -> (
     p = player();
     slot = p ~ 'selected_slot';
 
@@ -23,6 +39,7 @@ __command() -> (
 
     [name, count, nbt] = item_stack;
     if (name == 'writable_book',
-        inventory_set(p, slot, 1, 'minecraft:written_book', encode_nbt(get_book_data()));
+        inventory_set(p, slot, 1, 'minecraft:written_book', encode_nbt(_get_book_data(num)));
     );
 );
+
