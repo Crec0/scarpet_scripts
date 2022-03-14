@@ -4,14 +4,16 @@
 
 // Counts the logs generated during a tree growth
 // Useful in testing tree farms to see how often things generate at given position
+// Leaves part need to be modified for nether trees because of shroomlight, vines and such. Maybe in v2?
 
 global_LOGS_AND_STEMS = filter(filter(item_list(), _ ~ '\\w+(?:log|stem)$'), !(_ ~ '^stripped'));
 
 global_status = true;
 global_show_shapes = true;
 
-global_render_offset = [30, 0, 0];
+global_render_offset = [0, 20, 0];
 global_log_accumulator = {};
+global_leaves_accumulator = {};
 
 __config() -> {
 	'commands' -> {
@@ -19,7 +21,7 @@ __config() -> {
         'stop' -> _() -> (global_status = false),
         'show' -> 'show_shapes',
         'hide' -> _() -> (global_show_shapes = false),
-        'reset' -> _() -> (global_log_accumulator = {}),
+        'reset' -> _() -> (global_log_accumulator = {};global_leaves_accumulator = {};),
         'offset' -> _() -> print(player(), format('d Current Offset: ', str('c x: %d, y: %d, z: %d', ...global_render_offset))),
         'offset <x_int> <y_int> <z_int>' -> _(x, y, z) -> (global_render_offset = [x, y, z]),
     },
@@ -34,6 +36,7 @@ __config() -> {
 init_count(from, to, log) -> (
     global_status = true;
     global_log_accumulator = {};
+    global_leaves_accumulator = {};
     begin_counting(from, to, log);
     show_shapes();
 );
@@ -42,6 +45,10 @@ begin_counting(from, to, log) -> (
 	volume(from, to, 
         if(_ == log,
             global_log_accumulator:[_x + 0.5, _y + 0.5, _z + 0.5] += 1;
+            set(_, 'air');
+           ,
+           _ == replace('dark_oak_log', 'log|stem', 'leaves'),
+           	global_leaves_accumulator:[_x + 0.5, _y + 0.5, _z + 0.5] += 1;
             set(_, 'air');
         );
 	);
@@ -62,6 +69,17 @@ show_shapes() -> (
             'text', 'count', 
             'value', val, 
             'color', 0x00FFFFFF
+        ];
+    );
+   	for(pairs(global_leaves_accumulator),
+    	[key, val] = _; 
+	    shapes += [
+            'label', 
+            100,
+            'pos', map(range(3), key:_ + global_render_offset:_),
+            'text', 'count', 
+            'value', val, 
+            'color', 0x0000FFFF
         ];
     );
     draw_shape(shapes);
