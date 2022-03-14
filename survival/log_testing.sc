@@ -1,5 +1,6 @@
 // log_testing.sc
 // by Crec0
+// total rewrite of Firnagzen's log_testing.sc shared in Tree huggers
 
 // Counts the logs generated during a tree growth
 // Useful in testing tree farms to see how often things generate at given position
