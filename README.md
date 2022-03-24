@@ -41,14 +41,14 @@ to set the offset to desired location
 
 block colors have meaning too.
 
-script will count the total attempts. if the stuff is grown >50% of the attempts, the colors are 
-red_concrete for log/stem
-blue_stained_glass for leaves/wart_blocks
-red_stained_glass for vines
-slime_block for whatever else
+script will count the total attempts. if the stuff is grown >50% of the attempts, the colors are   
+- `red_concrete` for log/stem  
+- `blue_stained_glass` for leaves/wart_blocks  
+- `red_stained_glass` for vines  
+- `slime_block` for whatever else  
 
-if its <50%
-orange concrete for log/stem
-cyan_stained_glass for leaves/wart_blocks
-yellow_stained_glass for vines
-honey_block for whatever else
+if its <50%  
+- `orange_concrete` for log/stem   
+- `cyan_stained_glass` for leaves/wart_blocks   
+- `yellow_stained_glass` for vines  
+- `honey_block` for whatever else  
