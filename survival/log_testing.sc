@@ -4,24 +4,46 @@
 
 // Counts the logs generated during a tree growth
 // Useful in testing tree farms to see how often things generate at given position
-// Leaves part need to be modified for nether trees because of shroomlight, vines and such. Maybe in v2?
 
 global_LOGS_AND_STEMS = filter(filter(item_list(), _ ~ '\\w+(?:log|stem)$'), !(_ ~ '^stripped'));
 
-global_status = true;
-global_show_shapes = true;
+global_argument_dict = {
+	'log' -> 'log|stem',
+    'leaves' -> 'leaves|wart_block|mushroom_block',
+    'vines' -> 'vines',
+    'shroom' -> 'shroomlight',
+};
 
-global_render_offset = [0, 20, 0];
-global_log_accumulator = {};
-global_leaves_accumulator = {};
+global_status = true;
+global_show_shapes = false;
+
+global_render_offset = [0, 40, 0];
+global_accumulator = {};
+global_counter = {};
+
+global_total = 0;
 
 __config() -> {
 	'commands' -> {
     	'start <from_pos> <to_pos> <log>' -> 'init_count',
-        'stop' -> _() -> (global_status = false),
-        'show' -> 'show_shapes',
-        'hide' -> _() -> (global_show_shapes = false),
-        'reset' -> _() -> (global_log_accumulator = {};global_leaves_accumulator = {};),
+        'stop' -> _() -> (print(player(), format('g Log yeeting stopped.')); global_status = false),
+        'show' -> _() -> (
+        		print(player(), format('g Showing the shape for max blocks'));
+                global_show_shapes = false;
+                schedule(20, _() -> (
+                	global_show_shapes = true;
+                	show_shape(null);
+                ))),
+        'show <produce>' -> _(produce) -> (
+        		re = global_argument_dict:produce;
+                print(player(), format('g Showing the shape for ' + re));
+                global_show_shapes = false;
+                schedule(20, _(r) -> (
+                	global_show_shapes = true;
+                	show_shape(r);
+                ), re);
+            ),
+        'reset' -> 'reset',
         'offset' -> _() -> print(player(), format('d Current Offset: ', str('c x: %d, y: %d, z: %d', ...global_render_offset))),
         'offset <x_int> <y_int> <z_int>' -> _(x, y, z) -> (global_render_offset = [x, y, z]),
     },
@@ -29,61 +51,104 @@ __config() -> {
     	'log' -> {
         	'type' -> 'term',
             'options' -> global_LOGS_AND_STEMS,
+        },
+        'produce' -> {
+        	'type' -> 'term',
+            'options' -> ['log', 'leaves', 'vines', 'shroom'],
         }
     }
 };
 
-init_count(from, to, log) -> (
+reset() -> (
+	global_accumulator = {};
+    global_counter = {};
+    global_show_shapes = false;
     global_status = true;
-    global_log_accumulator = {};
-    global_leaves_accumulator = {};
+    global_total = 0;
+);
+
+init_count(from, to, log) -> (
+	print(player(), format('g Starting log yeeting from ' + from + ' to ' + to + ' for ' + log));
+    reset();
     begin_counting(from, to, log);
-    show_shapes();
+);
+
+get_produced_blocks(log) -> (
+	if (
+    	log == 'crimson_stem',
+	    	{'nether_wart_block', 'shroomlight', 'weeping_vines', 'weeping_vines_plant', log},
+        log == 'warped_stem',
+        	{'warped_wart_block', 'shroomlight', log},
+        log == 'mushroom_stem',
+        	{'red_mushroom_block', 'brown_mushroom_block', log},
+        {replace(log, 'log|stem', 'leaves'), log}
+    );
+);
+
+get_block(block) -> (
+	if (
+    	block ~ 'log|stem',
+        	if (global_accumulator:block > global_total / 2, 'red_concrete', 'orange_concrete'),
+        block ~ 'leaves|wart_block',
+        	if (global_accumulator:block > global_total / 2, 'blue_stained_glass', 'cyan_stained_glass'),
+        block ~ 'vines',
+        	if (global_accumulator:block > global_total / 2, 'red_stained_glass', 'yellow_stained_glass'),
+        block ~ 'air',
+        	'air',
+        if (global_accumulator:block > global_total / 2, 'slime_block', 'honey_block'),
+    )
+);
+
+get_max_block(map) -> (
+	max_b = null;
+    max_v = -1;
+    for(pairs(map),
+    	[k,v] = _;
+        if (
+			v > max_v,
+            	max_b = k;
+            	max_v = v;
+        );
+    );
+    max_b;
+);
+
+show_shape(block) -> (
+	for(pairs(global_counter),
+    	[k,v] = _;
+        show_block(k, if(block == null, get_max_block(v), block));
+    );
+    if (global_show_shapes,
+    	schedule(10, 'show_shape', block)
+    );
+);
+
+show_block(p, block) -> (
+	b = if(
+    		join('', global_counter:p) ~ block == null,
+        		'air',
+			block
+        );
+	set(p + global_render_offset, get_block(b));
 );
 
 begin_counting(from, to, log) -> (
-	volume(from, to, 
-        if(_ == log,
-            global_log_accumulator:[_x + 0.5, _y + 0.5, _z + 0.5] += 1;
+	produce = get_produced_blocks(log);
+    global_total += 1;
+    volume(from, to,
+    	s = str(_);
+        if(produce ~ s,
+        	global_accumulator:s += 1;
             set(_, 'air');
-           ,
-           _ == replace('dark_oak_log', 'log|stem', 'leaves'),
-           	global_leaves_accumulator:[_x + 0.5, _y + 0.5, _z + 0.5] += 1;
-            set(_, 'air');
+            p = [_x, _y, _z];
+            if (global_counter:p == null,
+            	global_counter:p = {};
+            );
+            global_counter:p:s += 1;
         );
 	);
 
 	if (global_status,
     	schedule(1, 'begin_counting', from, to, log)
-    );
-);
-
-show_shapes() -> (
-	shapes = [];
-	for(pairs(global_log_accumulator),
-    	[key, val] = _; 
-	    shapes += [
-            'label', 
-            100,
-            'pos', map(range(3), key:_ + global_render_offset:_),
-            'text', 'count', 
-            'value', val, 
-            'color', 0x00FFFFFF
-        ];
-    );
-   	for(pairs(global_leaves_accumulator),
-    	[key, val] = _; 
-	    shapes += [
-            'label', 
-            100,
-            'pos', map(range(3), key:_ + global_render_offset:_),
-            'text', 'count', 
-            'value', val, 
-            'color', 0x0000FFFF
-        ];
-    );
-    draw_shape(shapes);
-    if (global_show_shapes,
-    	schedule(1, 'show_shapes');
     );
 );
