@@ -87,11 +87,11 @@ get_produced_blocks(log) -> (
 
 get_block(block) -> (
 	if (
-    	block ~ global_argument_dict:'log',
+    	block ~ 'log|stem',
         	if (global_accumulator:block > global_total / 2, 'red_concrete', 'orange_concrete'),
-        block ~ global_argument_dict:'leaves',
+        block ~ 'leaves|wart_block|mushroom_block',
         	if (global_accumulator:block > global_total / 2, 'blue_stained_glass', 'cyan_stained_glass'),
-        block ~ global_argument_dict:'vines',
+        block ~ 'vines',
         	if (global_accumulator:block > global_total / 2, 'red_stained_glass', 'yellow_stained_glass'),
         block ~ 'air',
         	'air',
