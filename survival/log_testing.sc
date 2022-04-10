@@ -12,6 +12,8 @@ global_argument_dict = {
     'leaves' -> 'leaves|wart_block|mushroom_block',
     'vines' -> 'vines',
     'shroom' -> 'shroomlight',
+    'roots' -> 'mangrove_roots',
+    'benis' -> 'bee_nest'
 };
 
 global_status = true;
@@ -54,7 +56,7 @@ __config() -> {
         },
         'produce' -> {
         	'type' -> 'term',
-            'options' -> ['log', 'leaves', 'vines', 'shroom'],
+            'options' -> keys(global_argument_dict),
         }
     }
 };
@@ -81,6 +83,8 @@ get_produced_blocks(log) -> (
         	{'warped_wart_block', 'shroomlight', log},
         log == 'mushroom_stem',
         	{'red_mushroom_block', 'brown_mushroom_block', log},
+        log == 'mangrove_log',
+            {'vine', 'mangrove_roots', 'bee_nest', 'mangrove_leaves', 'mangrove_propagule', log},
         {replace(log, 'log|stem', 'leaves'), log}
     );
 );
@@ -88,14 +92,14 @@ get_produced_blocks(log) -> (
 get_block(block) -> (
 	if (
     	block ~ 'log|stem',
-        	if (global_accumulator:block > global_total / 2, 'red_concrete', 'orange_concrete'),
+        	if (global_accumulator:block > global_total / 4, 'red_concrete', 'orange_concrete'),
         block ~ 'leaves|wart_block|mushroom_block',
-        	if (global_accumulator:block > global_total / 2, 'blue_stained_glass', 'cyan_stained_glass'),
-        block ~ 'vines',
-        	if (global_accumulator:block > global_total / 2, 'red_stained_glass', 'yellow_stained_glass'),
-        block ~ 'air',
-        	'air',
-        if (global_accumulator:block > global_total / 2, 'slime_block', 'honey_block'),
+        	if (global_accumulator:block > global_total / 4, 'blue_stained_glass', 'cyan_stained_glass'),
+        block ~ 'vines|propagule',
+        	if (global_accumulator:block > global_total / 4, 'red_stained_glass', 'yellow_stained_glass'),
+        block ~ 'air|bee_nest',
+        	block,
+        if (global_accumulator:block > global_total / 4, 'slime_block', 'honey_block'),
     )
 );
 
@@ -134,8 +138,8 @@ show_block(p, block) -> (
 
 begin_counting(from, to, log) -> (
 	produce = get_produced_blocks(log);
-    global_total += 1;
     volume(from, to,
+        global_total += 1;
     	s = str(_);
         if(produce ~ s,
         	global_accumulator:s += 1;
