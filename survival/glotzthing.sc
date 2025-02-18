@@ -66,7 +66,7 @@ __run_and_check(color, threshold) -> (
     schedule(0, _(outer(color), outer(threshold)) -> (
         current_total = number(run('counter ' + color):1:0 ~ ': (\\d+),');
         global_ticks += 1;
-        global_mspt = (global_mspt + system_info('server_last_tick_times'):0) / 2;
+        global_mspt = (global_mspt + system_info('server_last_tick_times'):0);
 
         if (current_total < threshold, return());
 
@@ -79,7 +79,7 @@ __run_and_check(color, threshold) -> (
             'db Threshold for ' + color + ' counter hit!\n',
             'c Game has been frozen!\n',
             'l Ticks: ' + global_ticks + '\n',
-            'l Avg MSPT: ' + str('%.2f', global_mspt)
+            'l Avg MSPT: ' + str('%.2f', global_mspt / global_ticks)
         ));
     ));
 
